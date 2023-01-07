@@ -1,0 +1,103 @@
+        ================ ci4-multiauth-user-role ===================
+
+https://onlinewebtutorblog.com/codeigniter-4-multi-auth-user-role-wise-login/
+
+1. composer create-project codeigniter4/appstarter ci4-multiauth-user-role
+
+2. php spark make:model userModel
+
+    protected $table            = 'tbl_users';
+
+    protected $allowedFields    = [
+        "name",
+		"email",
+		"phone_no",
+		"password",
+		"role"
+    ];
+
+3. php spark make:seeder User --suffix
+
+4.php spark db:seed UserSeeder
+
+5.  php spark make:controller User  --suffix
+    php spark make:controller Admin --suffix
+    php spark make:controller Editor --suffix
+
+6. routes
+
+$routes->match(['get', 'post'], 'login', 'UserController::login', ["filter" => "noauth"]);
+// Admin routes
+$routes->group("admin", ["filter" => "auth"], function ($routes) {
+    $routes->get("/", "AdminController::index");
+});
+// Editor routes
+$routes->group("editor", ["filter" => "auth"], function ($routes) {
+    $routes->get("/", "EditorController::index");
+});
+$routes->get('logout', 'UserController::logout');
+
+//...
+
+
+7. php spark make:filter Auth
+
+     if (!session()->get('isLoggedIn')) {
+            return redirect()->to(site_url('login'));
+        }
+
+    
+
+8.  php spark make:filter Noauth
+
+    if (session()->get('isLoggedIn')) {
+
+			if (session()->get('role') == "admin") {
+				return redirect()->to(base_url('admin'));
+			}
+
+			if (session()->get('role') == "editor") {
+				return redirect()->to(base_url('editor'));
+			}
+        }
+
+
+9. /app/Config/Filters.php
+
+    # Update this
+
+    public $aliases = [
+
+    // .. others
+    "auth" => Auth::class,
+    "noauth" => Noauth::class,
+
+    ];
+
+10.  php spark make:validation Userrules
+    
+        public function validateUser(string $str, string $fields, array $data){
+        $model = new UserModel();
+        $user = $model->where('email', $data['email'])
+            ->first();
+
+        if (!$user) {
+            return false;
+        }
+
+        return password_verify($data['password'], $user['password']);
+    }
+
+
+11. app\Config\Validation.php
+
+        use App\Validation\Userrules;
+
+        public $ruleSets = [
+        // .. other rules
+        Userrules::class, // here we have registered
+        ];
+
+12. 
+
+    
